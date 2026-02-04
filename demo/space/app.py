@@ -2,51 +2,81 @@
 MAS-Orchestra Harmony Models — HuggingFace Space
 """
 
-import spaces
 import gradio as gr
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 MODELS = {
-    "Harmony GRPO-7B (step 180)": "alvinming/harmony-grpo-7b-global-step-180",
-    "Harmony Medium GRPO-7B — BrowseComp+ (step 140)": "alvinming/harmony-medium-grpo-7b-browse-comp-plus-global-step-140",
-    "Harmony Medium GRPO-7B — HotpotQA (step 250)": "alvinming/harmony-medium-grpo-7b-hotpot-global-step-250",
+    "Harmony GRPO-7B (step 180)": "rychin/harmony-grpo-7b-global-step-180",
+    "Harmony Medium GRPO-7B — BrowseComp+ (step 140)": "rychin/harmony-medium-grpo-7b-browse-comp-plus-global-step-140",
+    "Harmony Medium GRPO-7B — HotpotQA (step 250)": "rychin/harmony-medium-grpo-7b-hotpot-global-step-250",
 }
 
-# pre-load tokenizers (CPU, cheap)
-tokenizers = {}
-for name, repo_id in MODELS.items():
-    tokenizers[repo_id] = AutoTokenizer.from_pretrained(repo_id, trust_remote_code=True)
+# Load default model at startup
+DEFAULT_REPO = "rychin/harmony-grpo-7b-global-step-180"
+print(f"Loading tokenizer from {DEFAULT_REPO}...")
+tokenizer = AutoTokenizer.from_pretrained(DEFAULT_REPO, trust_remote_code=True)
+
+print(f"Loading model from {DEFAULT_REPO}...")
+model = AutoModelForCausalLM.from_pretrained(
+    DEFAULT_REPO,
+    torch_dtype=torch.bfloat16,
+    device_map="auto",
+    trust_remote_code=True,
+    low_cpu_mem_usage=True,  # Stream to GPU without staging in RAM
+)
+print("Model loaded and ready!")
+
+# Cache for other models if user switches
+loaded_models = {DEFAULT_REPO: model}
 
 
-@spaces.GPU
-def generate(prompt: str, model_name: str, max_tokens: int, temperature: float):
-    repo_id = MODELS[model_name]
-    tokenizer = tokenizers[repo_id]
+def get_model(repo: str):
+    """Get model from cache or load it."""
+    if repo not in loaded_models:
+        print(f"Loading model from {repo}...")
+        loaded_models[repo] = AutoModelForCausalLM.from_pretrained(
+            repo,
+            torch_dtype=torch.bfloat16,
+            device_map="auto",
+            trust_remote_code=True,
+            low_cpu_mem_usage=True,
+        )
+    return loaded_models[repo]
 
-    # load model fresh onto GPU each call (ZeroGPU releases between calls)
-    model = AutoModelForCausalLM.from_pretrained(
-        repo_id,
-        torch_dtype=torch.bfloat16,
-        device_map="cuda",
-        trust_remote_code=True,
-    )
 
-    inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+def generate(prompt, model_name, temperature):
+    repo = MODELS[model_name]
+    current_model = get_model(repo)
+
+    # Check if prompt is already formatted (API mode)
+    if "<|im_start|>" in prompt:
+        text = prompt
+    else:
+        # UI mode: apply chat template
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ]
+        text = tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+    
+    inputs = tokenizer(text, return_tensors="pt").to(current_model.device)
+
     with torch.no_grad():
-        outputs = model.generate(
+        outputs = current_model.generate(
             **inputs,
-            max_new_tokens=int(max_tokens),
+            max_new_tokens=8192,
             temperature=float(temperature) if temperature > 0 else None,
             do_sample=temperature > 0,
             top_p=0.95 if temperature > 0 else None,
+            pad_token_id=tokenizer.eos_token_id,
         )
 
-    generated = outputs[0][inputs["input_ids"].shape[-1]:]
-    return tokenizer.decode(generated, skip_special_tokens=True)
+    result = outputs[0][inputs["input_ids"].shape[-1]:]
+    return tokenizer.decode(result, skip_special_tokens=True)
 
 
-# ── light theme ──────────────────────────────────────────────────────
+# UI
 theme = gr.themes.Soft(
     primary_hue="blue",
     secondary_hue="slate",
@@ -54,53 +84,22 @@ theme = gr.themes.Soft(
     font=gr.themes.GoogleFont("Inter"),
 )
 
-css = """
-#header { text-align: center; margin-bottom: 0.5rem; }
-#header h1 { font-size: 1.6rem; font-weight: 700; color: #1e293b; }
-#header p  { color: #64748b; font-size: 0.95rem; }
-"""
+with gr.Blocks(theme=theme, title="MAS-Orchestra Harmony") as demo:
 
-# ── layout ───────────────────────────────────────────────────────────
-with gr.Blocks(theme=theme, css=css, title="MAS-Orchestra Harmony") as demo:
+    gr.Markdown("# MAS-Orchestra · Harmony Models\nMulti-agent reasoning checkpoints trained with GRPO")
 
-    gr.HTML(
-        '<div id="header">'
-        "<h1>MAS-Orchestra &middot; Harmony Models</h1>"
-        "<p>Multi-agent reasoning checkpoints trained with GRPO</p>"
-        "</div>"
-    )
+    with gr.Row():
+        with gr.Column():
+            model_dropdown = gr.Dropdown(list(MODELS.keys()), value=list(MODELS.keys())[0], label="Model")
+            prompt_box = gr.Textbox(lines=6, placeholder="Enter your question...", label="Prompt")
+            temperature = gr.Slider(0.0, 1.5, value=0.7, step=0.05, label="Temperature")
+            btn = gr.Button("Generate", variant="primary")
 
-    with gr.Row(equal_height=True):
+        with gr.Column():
+            output_box = gr.Textbox(lines=18, label="Response", show_copy_button=True)
 
-        # left panel — inputs
-        with gr.Column(scale=1):
-            model_name = gr.Dropdown(
-                choices=list(MODELS.keys()),
-                value=list(MODELS.keys())[0],
-                label="Model",
-            )
-            prompt = gr.Textbox(
-                lines=6,
-                placeholder="Enter your question or reasoning problem...",
-                label="Prompt",
-            )
-            with gr.Row():
-                max_tokens = gr.Slider(64, 2048, value=512, step=64, label="Max tokens")
-                temperature = gr.Slider(0.0, 1.5, value=0.7, step=0.05, label="Temperature")
-            run_btn = gr.Button("Generate", variant="primary")
-
-        # right panel — output
-        with gr.Column(scale=1):
-            output = gr.Textbox(label="Response", lines=18, interactive=False, show_copy_button=True)
-
-    run_btn.click(generate, inputs=[prompt, model_name, max_tokens, temperature], outputs=output)
-    prompt.submit(generate, inputs=[prompt, model_name, max_tokens, temperature], outputs=output)
-
-    gr.Markdown(
-        "<center style='color:#94a3b8; font-size:0.8rem; margin-top:1rem;'>"
-        "Built with MAS-Orchestra &middot; Salesforce Research"
-        "</center>"
-    )
+    btn.click(generate, [prompt_box, model_dropdown, temperature], output_box)
+    prompt_box.submit(generate, [prompt_box, model_dropdown, temperature], output_box)
 
 demo.queue()
-demo.launch()
+demo.launch(show_error=True)
