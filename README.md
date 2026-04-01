@@ -20,8 +20,8 @@
   <p>
     <a href="#getting-started" style="text-decoration: none; font-weight: bold;">✨ Getting Started</a> •
     <a href="#training" style="text-decoration: none; font-weight: bold;">🏋️ MAS-Orchestra</a> •
-    <!-- <a href="#usage" style="text-decoration: none; font-weight: bold;">🔧 Usage</a> • -->
-    <!-- <a href="#evaluation-code" style="text-decoration: none; font-weight: bold;">📃 Evaluation</a> -->
+    <a href="#masbench" style="text-decoration: none; font-weight: bold;">📐 MASBench</a> •
+    <a href="#case-inspection" style="text-decoration: none; font-weight: bold;">🔍 Case Inspection</a>
   </p>
   <p>
     <a href="#citation" style="text-decoration: none; font-weight: bold;">🎈 Citation</a> •
@@ -61,21 +61,9 @@
   A short illustration of MAS-Orchestra (AIME24 as an example). 
 </p>
 
-<div style="max-width: 920px;">
-  <div style="position: relative; padding-top: 56.25%; border-radius: 14px; overflow: hidden; border: 1px solid #eef0fb; box-shadow: 0 8px 18px rgba(30, 64, 175, 0.06); background: #000;">
-    <iframe
-      src="https://drive.google.com/file/d/1FO2H-N1EemQ6_ju1b58_G5jWhs92ZRgu/preview"
-      title="MAS-Orchestra demo video"
-      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
-      allow="autoplay"
-      allowfullscreen></iframe>
-  </div>
-</div>
-
-<p>
-  If the embed does not render in your viewer, open the video here:
-  <a href="https://drive.google.com/file/d/1FO2H-N1EemQ6_ju1b58_G5jWhs92ZRgu/view?usp=drive_link" target="_blank" rel="noopener">
-    https://drive.google.com/file/d/1FO2H-N1EemQ6_ju1b58_G5jWhs92ZRgu/view
+<p align="center">
+  <a href="https://drive.google.com/file/d/1FO2H-N1EemQ6_ju1b58_G5jWhs92ZRgu/view?usp=drive_link">
+    <img src="figures/demo_teaser.png" alt="MAS-Orchestra Demo Video" width="80%">
   </a>
 </p>
 
@@ -85,9 +73,15 @@
   <hr style="height: 3px; background: linear-gradient(90deg, #EF8E8D, #5755A3); border: none; border-radius: 3px;">
 </div>
 
+
+<p align="center">
+  <img src="figures/pareto_front.png" alt="Pareto Front: Accuracy vs. Cost" width="560">
+</p>
+
+<p align="center"><em>Accuracy vs. cost Pareto front. MAS-Orchestra achieves Pareto-optimal performance with the highest accuracy at low cost.</em></p>
+
 MAS-Orchestra achieves state-of-the-art performance across both IID and OOD benchmarks while maintaining Pareto-optimal cost efficiency.
 
-<div align="center">
 <table>
   <thead>
     <tr>
@@ -126,11 +120,6 @@ MAS-Orchestra achieves state-of-the-art performance across both IID and OOD benc
 
 <p align="center"><em>Performance comparison across IID and OOD benchmarks. MAS-Orchestra achieves the best results on all tasks.</em></p>
 
-<p align="center">
-  <img src="figures/pareto_front.png" alt="Pareto Front: Accuracy vs. Cost" width="560">
-</p>
-
-<p align="center"><em>Accuracy vs. cost Pareto front. MAS-Orchestra achieves Pareto-optimal performance with the highest accuracy at low cost.</em></p>
 
 <!-- ============================================== -->
 <div align="left">
@@ -165,6 +154,14 @@ pip install git+https://github.com/texttron/tevatron.git
 ```bash
 python -m absolute_zero_reasoner.data_construction.process_code_reasoning_data
 ``` -->
+
+## 📦 (Optional) Download Trained Orchestrators
+
+| Task | Model |
+|------|-------|
+| Math (AIME) | [harmony-grpo-7b-global-step-180](https://huggingface.co/ZixuanKe/harmony-grpo-7b-global-step-180) |
+| HotpotQA | [harmony-medium-grpo-7b-hotpot-global-step-250](https://huggingface.co/ZixuanKe/harmony-medium-grpo-7b-hotpot-global-step-250) |
+| BrowseComp+ | [harmony-medium-grpo-7b-browse-comp-plus-global-step-140](https://huggingface.co/ZixuanKe/harmony-medium-grpo-7b-browse-comp-plus-global-step-140) |
 
 <!-- ============================================== -->
 <div align="left">
@@ -211,6 +208,71 @@ python -u -m mas_r1_reasoner.main_mas_r1 \
 
 <!-- ============================================== -->
 <div align="left">
+  <h1 id="masbench">📐 MASBench</h1>
+  <hr style="height: 3px; background: linear-gradient(90deg, #EF8E8D, #5755A3); border: none; border-radius: 3px;">
+</div>
+
+[MASBench](https://huggingface.co/datasets/Salesforce/MASBench) is a controlled benchmark that characterizes tasks along **five structural axes** to rigorously study when and why multi-agent systems outperform single-agent systems.
+
+### A Five-Axis Evaluation Framework
+
+<p align="center">
+  <img src="figures/five_axis.png" alt="Five-Axis Evaluation Framework" width="80%">
+</p>
+
+| Axis | Definition |
+|------|-----------|
+| **Depth** | Length of the longest dependency chain |
+| **Horizon** | Number of intermediate sub-tasks whose answers are needed |
+| **Breadth** | Maximum in-degree, i.e., maximum dependencies of a sub-task |
+| **Parallel** | Number of independent sub-task components in the task |
+| **Robustness** | Number of sub-tasks with adversarial attacks |
+
+### Benchmark Statistics
+
+<p align="center">
+  <img src="figures/masbench_stats.png" alt="MASBench Statistics" width="70%">
+</p>
+
+The benchmark covers all five axes with axis values ranging from 2 to 12, and provides axis-specific training and test splits. The dataset is available on [Hugging Face](https://huggingface.co/datasets/Salesforce/MASBench).
+
+<!-- ============================================== -->
+<div align="left">
+  <h1 id="case-inspection">🔍 Case Inspection</h1>
+  <hr style="height: 3px; background: linear-gradient(90deg, #EF8E8D, #5755A3); border: none; border-radius: 3px;">
+</div>
+
+Browse real, generated multi-agent designs produced by MAS-Orchestra. Each example shows the full orchestration trace — how the orchestrator decomposes a task, selects sub-agents, and aggregates their outputs.
+
+<p align="center">
+  <img src="figures/case_teaser.png" alt="Case Teaser" width="80%">
+</p>
+
+<p align="center">
+  <a href="https://vincent950129.github.io/mas-design/mas_r1/#generated-mas-examples">
+    <img src="https://img.shields.io/badge/Browse_More_Examples-on_Project_Page-5755A3?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Browse Examples">
+  </a>
+</p>
+
+**Highlights from the case studies:**
+
+- **AIME24 (Low DoM):** MAS-Orchestra learns to delegate entirely to a single strong sub-agent (100% delegation after 20 training steps), dynamically selecting ReflexionAgent or DebateAgent — the best-performing standalone baselines.
+- **BrowseComp+ (High DoM):** MAS-Orchestra generates substantially more sub-agents, invoking SearchAgent with 3–4 parallel search processes per question.
+- **General Pattern:** MAS-Orchestra dynamically adapts to each task by proposing MAS designs that align with the underlying sub-task structure and delegating execution to the most effective agent configurations.
+
+<!-- ============================================== -->
+<div align="left">
+  <h1 id="mas-series">🤖 Check Out Our MAS Series</h1>
+  <hr style="height: 3px; background: linear-gradient(90deg, #EF8E8D, #5755A3); border: none; border-radius: 3px;">
+</div>
+
+- **[MAS-Zero](https://github.com/SalesforceAIResearch/MAS-Zero)**: Designing Multi-Agent Systems with Zero Supervision — an inference-time self-refinement framework for automatic MAS design.
+- **[MAS-ProVe](https://github.com/Wang-ML-Lab/MAS-ProVe)**: Understanding the Process Verification of Multi-Agent Systems — analysis of process verification for multi-agent systems.
+- **[SkillOrchestra](https://github.com/jiayuww/SkillOrchestra)**: Learning to Route Agents via Skill Transfer — skill-based agent routing.
+- **[LLM Reasoning Survey](https://llm-reasoning-ai.github.io/)**: A Survey of Frontiers in LLM Reasoning: Inference Scaling, Learning to Reason, and Agentic Systems.
+
+<!-- ============================================== -->
+<div align="left">
   <h1 id="citation">🎈 Citation</h1>
   <hr style="height: 3px; background: linear-gradient(90deg, #EF8E8D, #5755A3); border: none; border-radius: 3px;">
 </div>
@@ -228,16 +290,6 @@ If you find MAS-Orchestra helpful, please consider starring this repo and citing
         note         = {Preprint; Work in Progress},
       }
 ```
-
-<!-- ============================================== -->
-<div align="left">
-  <h1 id="mas-series">🤖 MAS Series from Salesforce AI Research</h1>
-  <hr style="height: 3px; background: linear-gradient(90deg, #EF8E8D, #5755A3); border: none; border-radius: 3px;">
-</div>
-
-- **MAS-Zero**: https://github.com/SalesforceAIResearch/MAS-Zero
-- **MAS-ProVe**: https://github.com/Wang-ML-Lab/MAS-ProVe
-
 <!-- ============================================== -->
 <div align="left">
   <h1 id="acknowledgement">🌻 Acknowledgement</h1>
