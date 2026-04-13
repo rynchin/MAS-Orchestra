@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useOrchestration } from "./hooks/useOrchestration";
 import { GraphViewer } from "./components/GraphViewer";
 import { AgentOutputs } from "./components/AgentOutputs";
-import type { DomLevel, Stage } from "./types";
+import { DatasetPicker } from "./components/DatasetPicker";
+import type { Dataset, Stage, SubagentModel } from "./types";
+import { DATASETS, SUBAGENT_MODELS } from "./types";
 
 const STAGES: Stage[] = ["input", "plan", "execute", "result"];
 
@@ -48,8 +50,8 @@ const PaperIcon = () => (
 );
 
 export default function App() {
-  const { stage, expectedAnswer, plan, graph, agentStates, finalAnswer, error, isLoading, generatePlan, executePlan, goToStage, reset } = useOrchestration();
-  const [input, setInput] = useState({ problem: "", expected: "", dom: "high" as DomLevel });
+  const { stage, expectedAnswer, plan, graph, agentStates, finalAnswer, error, isLoading, subagentModel, generatePlan, executePlan, setSubagentModel, goToStage, reset } = useOrchestration();
+  const [input, setInput] = useState({ problem: "", expected: "", dataset: "hotpot" as Dataset });
 
   const isDirect = plan?.graph.direct_solution != null;
   const canSelect = (s: Stage) => {
@@ -63,7 +65,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-6 py-8">
-        {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -95,7 +96,6 @@ export default function App() {
 
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
 
-        {/* Input */}
         {stage === "input" && (
           <div className="bg-white rounded-xl border p-6 space-y-4">
             <div>
@@ -108,12 +108,23 @@ export default function App() {
               <input value={input.expected} onChange={e => setInput(s => ({ ...s, expected: e.target.value }))}
                 placeholder="For comparison..." className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div className="flex items-center gap-4">
-              <select value={input.dom} onChange={e => setInput(s => ({ ...s, dom: e.target.value as DomLevel }))} className="px-3 py-2 border rounded-lg text-sm">
-                <option value="low">Low (Single Agent)</option>
-                <option value="high">High (Multi-Agent)</option>
-              </select>
-              <button onClick={() => input.problem.trim() && generatePlan(input.problem.trim(), input.dom, input.expected.trim())}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">Dataset</label>
+                <select value={input.dataset} onChange={e => setInput(s => ({ ...s, dataset: e.target.value as Dataset }))} className="px-3 py-1.5 border rounded-lg text-sm">
+                  {DATASETS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                </select>
+              </div>
+              <DatasetPicker dataset={input.dataset} onSelect={(question, answer) => setInput(s => ({ ...s, problem: question, expected: answer }))} />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Sub-agent Model</label>
+                <select value={subagentModel} onChange={e => setSubagentModel(e.target.value as SubagentModel)} className="px-3 py-1.5 border rounded-lg text-sm">
+                  {SUBAGENT_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </div>
+              <button onClick={() => input.problem.trim() && generatePlan(input.problem.trim(), input.dataset, input.expected.trim())}
                 disabled={!input.problem.trim() || isLoading} className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300">
                 {isLoading ? "Generating..." : "Generate Plan →"}
               </button>
@@ -121,7 +132,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Plan */}
         {stage === "plan" && plan && (
           <div className="bg-white rounded-xl border p-6 space-y-6">
             {plan.thinking && (
@@ -130,7 +140,6 @@ export default function App() {
                 <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg whitespace-pre-wrap">{plan.thinking}</p>
               </div>
             )}
-
             {isDirect ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
@@ -155,12 +164,10 @@ export default function App() {
                 </div>
               </div>
             )}
-
             <details className="text-sm">
               <summary className="text-gray-500 cursor-pointer">Raw XML</summary>
               <pre className="mt-2 p-3 bg-slate-900 text-slate-300 rounded-lg overflow-auto max-h-48 text-xs">{plan.xml}</pre>
             </details>
-
             <div className="flex gap-3 pt-2">
               <button onClick={() => goToStage("input")} className="px-4 py-2 border rounded-lg text-sm">← Back</button>
               {isDirect ? (
@@ -176,7 +183,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Execute / Result with graph */}
         {(stage === "execute" || (stage === "result" && !isDirect)) && graph && graph.agents.length > 0 && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -189,7 +195,6 @@ export default function App() {
                 <AgentOutputs graph={graph} agentStates={agentStates} />
               </div>
             </div>
-
             {stage === "result" && finalAnswer && (
               <div className="bg-white rounded-xl border p-6 space-y-4">
                 <h3 className="text-sm font-medium text-gray-500">Final Answer</h3>
@@ -210,7 +215,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Direct solution result */}
         {stage === "result" && isDirect && (
           <div className="bg-white rounded-xl border p-6 space-y-4">
             <div className="flex items-center gap-2 mb-2">

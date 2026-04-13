@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ReactFlow, Node, Edge as FlowEdge, Background, Controls, MarkerType } from "@xyflow/react";
+import { ReactFlow, Node, Edge as FlowEdge, Background, Controls, MarkerType, Handle, Position } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { Graph, AgentState, AgentType } from "../types";
 
@@ -25,16 +25,20 @@ const STATUS_BORDER: Record<string, string> = {
 
 function AgentNode({ data }: { data: { label: string; type: AgentType; status: string } }) {
   return (
-    <div className={`px-4 py-3 rounded-lg border-2 bg-white min-w-[140px] transition-all ${STATUS_BORDER[data.status] || STATUS_BORDER.pending}`}>
-      <div className="text-xs font-mono mb-1" style={{ color: COLORS[data.type] }}>{data.type}</div>
-      <div className="text-sm font-medium text-gray-800">{data.label}</div>
-      {data.status === "running" && (
-        <div className="mt-2 flex items-center gap-1.5">
-          <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-          <span className="text-xs text-amber-600">Running</span>
-        </div>
-      )}
-    </div>
+    <>
+      <Handle type="target" position={Position.Top} style={{ background: "#9ca3af", border: "none", width: 8, height: 8 }} />
+      <div className={`px-4 py-3 rounded-lg border-2 bg-white min-w-[140px] transition-all ${STATUS_BORDER[data.status] || STATUS_BORDER.pending}`}>
+        <div className="text-xs font-mono mb-1" style={{ color: COLORS[data.type] }}>{data.type}</div>
+        <div className="text-sm font-medium text-gray-800">{data.label}</div>
+        {data.status === "running" && (
+          <div className="mt-2 flex items-center gap-1.5">
+            <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+            <span className="text-xs text-amber-600">Running</span>
+          </div>
+        )}
+      </div>
+      <Handle type="source" position={Position.Bottom} style={{ background: "#9ca3af", border: "none", width: 8, height: 8 }} />
+    </>
   );
 }
 
@@ -46,7 +50,6 @@ export function GraphViewer({ graph, agentStates }: Props) {
     const placed = new Set<string>();
     const agentMap = new Map(graph.agents.map(a => [a.id, a]));
 
-    // Build layers by dependency order
     while (placed.size < graph.agents.length) {
       const layer = graph.agents
         .filter(a => !placed.has(a.id) && a.depends_on.every(d => placed.has(d)))
@@ -56,7 +59,6 @@ export function GraphViewer({ graph, agentStates }: Props) {
       layers.push(layer);
     }
 
-    // Position nodes
     const nodes: Node[] = [];
     const xSpacing = 200, ySpacing = 120;
 
@@ -73,13 +75,13 @@ export function GraphViewer({ graph, agentStates }: Props) {
       });
     });
 
-    // Create edges
     const edges: FlowEdge[] = graph.edges.map((e, i) => ({
       id: `e${i}`,
       source: e.source,
       target: e.target,
-      markerEnd: { type: MarkerType.ArrowClosed, color: "#9ca3af" },
-      style: { stroke: "#9ca3af", strokeWidth: 2 },
+      type: "smoothstep",
+      markerEnd: { type: MarkerType.ArrowClosed, color: "#9ca3af", width: 14, height: 14 },
+      style: { stroke: "#9ca3af", strokeWidth: 1.5 },
       animated: agentStates[e.target]?.status === "running",
     }));
 

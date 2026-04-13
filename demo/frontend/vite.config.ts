@@ -10,6 +10,7 @@ export default defineConfig({
       '/execute': 'http://localhost:8000',
       '/run': 'http://localhost:8000',
       '/health': 'http://localhost:8000',
+      '/dataset': 'http://localhost:8000',
     }
   }
 })
