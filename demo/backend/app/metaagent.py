@@ -3,7 +3,7 @@ from openai import AsyncOpenAI
 from .models import Dataset, DATASET_META, DomLevel
 from .vllm_prompts import build_math_messages, build_mas_messages
 
-VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "https://discern-stroller-recycling.ngrok-free.dev/v1")
+VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "")
 
 _vllm_client: AsyncOpenAI | None = None
 
