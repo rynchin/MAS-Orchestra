@@ -48,6 +48,3 @@ class Graph(BaseModel):
     direct_solution: str | None = None
 
 
-class RunRequest(BaseModel):
-    problem: str
-    dataset: Dataset = Dataset.HOTPOT

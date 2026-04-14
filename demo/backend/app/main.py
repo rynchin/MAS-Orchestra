@@ -1,3 +1,7 @@
+from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent / ".env", override=True)
+
 import asyncio
 import json
 import re
@@ -5,15 +9,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
-from dotenv import load_dotenv
 
-from .models import RunRequest, Graph, DomLevel, Dataset, DATASET_META
+from .models import Graph, Dataset, DATASET_META
 from .datasets import get_samples
 from .parser import parse, topo_sort
 from .metaagent import call_metaagent
 from .executor import execute_agent
-
-load_dotenv()
 
 app = FastAPI(title="MAS-Orchestra Demo")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
@@ -72,7 +73,7 @@ async def run_execution(problem: str, graph_dict: dict, subagent_model: str = "g
 
         async def run_and_enqueue(aid: str):
             try:
-                output = await execute_agent(agents[aid], problem, ctx, subagent_model)
+                output = await execute_agent(agents[aid], problem, ctx, subagent_model, is_answer_agent=(aid == graph.answer_agent))
                 await queue.put((aid, output, None))
             except Exception as e:
                 await queue.put((aid, None, str(e)))
